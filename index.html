@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Football Clicker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Home Screen Icon Setup - Using icon.png.jpg -->
+    <link rel="apple-touch-icon" href="icon.png.jpg">
+    <link rel="icon" type="image/jpeg" href="icon.png.jpg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Football Clicker">
+    <meta name="theme-color" content="#0a4d2e">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            background: #0a4d2e;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+        }
+        h1 { margin: 10px 0; }
+        #money {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stats {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .stats-line {
+            margin: 3px 0;
+        }
+        #football {
+            width: 180px;
+            cursor: pointer;
+            transition: transform 0.05s;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+        #football:active { transform: scale(0.92); }
+        .shop {
+            max-width: 400px;
+            margin: 30px auto;
+            background: #083a23;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #1a5c3a;
+        }
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .shop-nav {
+            background: #1a5c3a;
+            border: 2px solid #2d7a4f;
+            color: white;
+            font-size: 1.2em;
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .shop-nav:hover:not(:disabled) { background: #2d7a4f; }
+        .shop-nav:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .shop-page {
+            display: none;
+        }
+        .shop-page.active {
+            display: block;
+        }
+        .item {
+            background: #1a5c3a;
+            border: 2px solid #2d7a4f;
+            border-radius: 8px;
+            margin: 15px 0;
+            padding: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .item:hover:not(.disabled):not(.bought) { background: #2d7a4f; }
+        .item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .item.bought {
+            background: #444;
+            border-color: #666;
+            cursor: default;
+            opacity: 0.7;
+        }
+        .item-title { font-size: 1.3em; font-weight: bold; }
+        .item-desc { font-size: 0.9em; opacity: 0.8; margin-top: 5px; }
+        .timer {
+            font-size: 0.8em;
+            color: #ffd700;
+            margin-top: 4px;
+        }
+        #restart-btn {
+            background: #8b0000;
+            border: 2px solid #b22222;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        #restart-btn:hover { background: #b22222; }
+        #save-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 0.8em;
+            opacity: 0.6;
+        }
+        #page-indicator {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚽ Football Clicker ⚽</h1>
+    <div id="money">£0</div>
+    <div class="stats">
+        <div class="stats-line">£<span id="perClick">1</span> per click</div>
+        <div class="stats-line">£<span id="perSecond">0</span> per second</div>
+        <div class="stats-line" id="goalend-income-line" style="display:none;">Goal Ends: £<span id="goalend-income">0</span> per 2min</div>
+        <div class="stats-line" id="grandstand-income-line" style="display:none;">Grandstands: £<span id="grandstand-income">0</span> per 5min</div>
+        <div class="stats-line" id="manager-line" style="display:none;">Manager: 1.5x Multiplier Active</div>
+    </div>
+    
+    <img id="football" src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg" alt="Football">
+
+    <div class="shop">
+        <div class="shop-header">
+            <button class="shop-nav" id="prev-page" onclick="changePage(-1)">◀</button>
+            <div>
+                <h2 style="margin: 0;">Shop</h2>
+                <div id="page-indicator">Page 1/3</div>
+            </div>
+            <button class="shop-nav" id="next-page" onclick="changePage(1)">▶</button>
+        </div>
+        
+        <!-- Page 1 -->
+        <div class="shop-page active" data-page="1">
+            <div class="item" id="gloves" onclick="buyGloves()">
+                <div class="item-title">Goalkeeper Gloves</div>
+                <div class="item-desc">+£2 per click</div>
+                <div>Cost: £<span id="gloves-cost">15</span> | Owned: <span id="gloves-owned">0</span></div>
+            </div>
+            <div class="item" id="boots" onclick="buyBoots()">
+                <div class="item-title">Football Boots</div>
+                <div class="item-desc">1.2x click multiplier</div>
+                <div>Cost: £500 | <span id="boots-status">Not Owned</span></div>
+            </div>
+            <div class="item" id="striker" onclick="buyStriker()">
+                <div class="item-title">Striker</div>
+                <div class="item-desc">+£0.5 per second</div>
+                <div>Cost: £1,500 | <span id="striker-status">Not Owned</span></div>
+            </div>
+        </div>
+        
+        <!-- Page 2 -->
+        <div class="shop-page" data-page="2">
+            <div class="item" id="pitch" onclick="buyPitch()">
+                <div class="item-title">Football Pitch</div>
+                <div class="item-desc">+£4 per click</div>
+                <div>Cost: £<span id="pitch-cost">6,250</span> | Owned: <span id="pitch-owned">0</span></div>
+            </div>
+            <div class="item" id="manager" onclick="buyManager()">
+                <div class="item-title">Manager</div>
+                <div class="item-desc">1.5x ALL money earned</div>
+                <div>Cost: £250,000 | <span id="manager-status">Not Owned</span></div>
+            </div>
+            <div class="item" id="goalend" onclick="buyGoalEnd()">
+                <div class="item-title">Goal End Stand</div>
+                <div class="item-desc">+£500 every 2 minutes</div>
+                <div>Cost: £<span id="goalend-cost">550,000</span> | Owned: <span id="goalend-owned">0</span>/2</div>
+                <div class="timer" id="goalend-timer"></div>
+            </div>
+        </div>
+        
+        <!-- Page 3 -->
+        <div class="shop-page" data-page="3">
+            <div class="item" id="grandstand" onclick="buyGrandstand()">
+                <div class="item-title">Grandstand</div>
+                <div class="item-desc">+£1,000 every 5 minutes</div>
+                <div>Cost: £<span id="grandstand-cost">1,000,000</span> | Owned: <span id="grandstand-owned">0</span>/2</div>
+                <div class="timer" id="grandstand-timer"></div>
+            </div>
+        </div>
+        
+        <button id="restart-btn" onclick="restartGame()">Restart Game</button>
+    </div>
+
+    <div id="save-status">Auto-saved</div>
+
+<script>
+let money = 0;
+let basePerClick = 1;
+let glovesOwned = 0;
+let gloveCost = 15;
+let gloveBonus = 2;
+let hasBoots = false;
+let hasStriker = false;
+let hasManager = false;
+let pitchOwned = 0;
+let pitchCost = 6250;
+let grandstandOwned = 0;
+let grandstandCost = 1000000;
+let grandstandTimer = 300;
+let goalEndOwned = 0;
+let goalEndCost = 550000;
+let goalEndTimer = 120;
+let currentPage = 1;
+const totalPages = 3;
+
+const BOOTS_COST = 500;
+const BOOTS_MULTIPLIER = 1.2;
+const STRIKER_COST = 1500;
+const STRIKER_INCOME = 0.5;
+const MANAGER_COST = 250000;
+const MANAGER_MULTIPLIER = 1.5;
+const PITCH_BONUS = 4;
+const PITCH_COST_INCREASE = 100;
+const GRANDSTAND_PAYOUT = 1000;
+const GRANDSTAND_INTERVAL = 300;
+const GRANDSTAND_COST_INCREASE = 250000;
+const GOALEND_PAYOUT = 500;
+const GOALEND_INTERVAL = 120;
+const GOALEND_COST_INCREASE = 100000;
+const GLOVE_COST_INCREASE = 30;
+const STARTING_GLOVE_COST = 15;
+const STARTING_PITCH_COST = 6250;
+const STARTING_GRANDSTAND_COST = 1000000;
+const STARTING_GOALEND_COST = 550000;
+
+function getPerClick() {
+    let perClick = basePerClick + (glovesOwned * gloveBonus) + (pitchOwned * PITCH_BONUS);
+    if (hasBoots) perClick = Math.floor(perClick * BOOTS_MULTIPLIER);
+    if (hasManager) perClick = Math.floor(perClick * MANAGER_MULTIPLIER);
+    return perClick;
+}
+
+function getPerSecond() {
+    let perSec = hasStriker ? STRIKER_INCOME : 0;
+    if (hasManager) perSec = perSec * MANAGER_MULTIPLIER;
+    return perSec;
+}
+
+function changePage(direction) {
+    const newPage = currentPage + direction;
+    if (newPage >= 1 && newPage <= totalPages) {
+        document.querySelector(`.shop-page[data-page="${currentPage}"]`).classList.remove('active');
+        currentPage = newPage;
+        document.querySelector(`.shop-page[data-page="${currentPage}"]`).classList.add('active');
+        updatePageNav();
+    }
+}
+
+function updatePageNav() {
+    document.getElementById('prev-page').disabled = currentPage === 1;
+    document.getElementById('next-page').disabled = currentPage === totalPages;
+    document.getElementById('page-indicator').textContent = `Page ${currentPage}/${totalPages}`;
+}
+
+document.getElementById('football').onclick = () => {
+    money += getPerClick();
+    updateDisplay();
+    saveGame();
+};
+
+function buyGloves() {
+    if (money >= gloveCost) {
+        money -= gloveCost;
+        glovesOwned++;
+        gloveCost += GLOVE_COST_INCREASE;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyBoots() {
+    if (!hasBoots && money >= BOOTS_COST) {
+        money -= BOOTS_COST;
+        hasBoots = true;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyStriker() {
+    if (!hasStriker && money >= STRIKER_COST) {
+        money -= STRIKER_COST;
+        hasStriker = true;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyManager() {
+    if (!hasManager && money >= MANAGER_COST) {
+        money -= MANAGER_COST;
+        hasManager = true;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyPitch() {
+    if (money >= pitchCost) {
+        money -= pitchCost;
+        pitchOwned++;
+        pitchCost += PITCH_COST_INCREASE;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyGrandstand() {
+    if (grandstandOwned < 2 && money >= grandstandCost) {
+        money -= grandstandCost;
+        grandstandOwned++;
+        if (grandstandOwned === 1) grandstandTimer = GRANDSTAND_INTERVAL;
+        grandstandCost += GRANDSTAND_COST_INCREASE;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function buyGoalEnd() {
+    if (goalEndOwned < 2 && money >= goalEndCost) {
+        money -= goalEndCost;
+        goalEndOwned++;
+        if (goalEndOwned === 1) goalEndTimer = GOALEND_INTERVAL;
+        goalEndCost += GOALEND_COST_INCREASE;
+        updateDisplay();
+        saveGame();
+    }
+}
+
+function restartGame() {
+    if (confirm('Are you sure you want to restart? All progress will be lost.')) {
+        money = 0;
+        glovesOwned = 0;
+        gloveCost = STARTING_GLOVE_COST;
+        hasBoots = false;
+        hasStriker = false;
+        hasManager = false;
+        pitchOwned = 0;
+        pitchCost = STARTING_PITCH_COST;
+        grandstandOwned = 0;
+        grandstandCost = STARTING_GRANDSTAND_COST;
+        grandstandTimer = GRANDSTAND_INTERVAL;
+        goalEndOwned = 0;
+        goalEndCost = STARTING_GOALEND_COST;
+        goalEndTimer = GOALEND_INTERVAL;
+        currentPage = 1;
+        localStorage.removeItem('footballClicker');
+        document.querySelectorAll('.shop-page').forEach(p => p.classList.remove('active'));
+        document.querySelector('.shop-page[data-page="1"]').classList.add('active');
+        updatePageNav();
+        updateDisplay();
+        document.getElementById('save-status').textContent = 'Game Reset';
+        setTimeout(() => document.getElementById('save-status').textContent = 'Auto-saved', 1500);
+    }
+}
+
+function formatTime(secs) {
+    let mins = Math.floor(secs / 60);
+    let s = secs % 60;
+    return `${mins}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateDisplay() {
+    document.getElementById('money').textContent = `£${money.toFixed(1)}`;
+    document.getElementById('perClick').textContent = getPerClick();
+    document.getElementById('perSecond').textContent = getPerSecond().toFixed(1);
+    document.getElementById('gloves-cost').textContent = gloveCost;
+    document.getElementById('gloves-owned').textContent = glovesOwned;
+    document.getElementById('pitch-cost').textContent = pitchCost.toLocaleString();
+    document.getElementById('pitch-owned').textContent = pitchOwned;
+    document.getElementById('grandstand-cost').textContent = grandstandCost.toLocaleString();
+    document.getElementById('grandstand-owned').textContent = grandstandOwned;
+    document.getElementById('goalend-cost').textContent = goalEndCost.toLocaleString();
+    document.getElementById('goalend-owned').textContent = goalEndOwned;
+    
+    // Update stand income displays
+    const grandstandIncome = grandstandOwned * GRANDSTAND_PAYOUT * (hasManager ? MANAGER_MULTIPLIER : 1);
+    const goalEndIncome = goalEndOwned * GOALEND_PAYOUT * (hasManager ? MANAGER_MULTIPLIER : 1);
+    
+    if (goalEndIncome > 0) {
+        document.getElementById('goalend-income-line').style.display = 'block';
+        document.getElementById('goalend-income').textContent = Math.floor(goalEndIncome).toLocaleString();
+    } else {
+        document.getElementById('goalend-income-line').style.display = 'none';
+    }
+    
+    if (grandstandIncome > 0) {
+        document.getElementById('grandstand-income-line').style.display = 'block';
+        document.getElementById('grandstand-income').textContent = Math.floor(grandstandIncome).toLocaleString();
+    } else {
+        document.getElementById('grandstand-income-line').style.display = 'none';
+    }
+    
+    // Manager status
+    if (hasManager) {
+        document.getElementById('manager-line').style.display = 'block';
+    } else {
+        document.getElementById('manager-line').style.display = 'none';
+    }
+    
+    // Gloves
+    document.getElementById('gloves').classList.toggle('disabled', money < gloveCost);
+    
+    // Boots
+    const bootsEl = document.getElementById('boots');
+    document.getElementById('boots-status').textContent = hasBoots ? 'Owned' : 'Not Owned';
+    if (hasBoots) {
+        bootsEl.classList.add('bought');
+        bootsEl.classList.remove('disabled');
+    } else {
+        bootsEl.classList.remove('bought');
+        bootsEl.classList.toggle('disabled', money < BOOTS_COST);
+    }
+    
+    // Striker
+    const strikerEl = document.getElementById('striker');
+    document.getElementById('striker-status').textContent = hasStriker ? 'Owned' : 'Not Owned';
+    if (hasStriker) {
+        strikerEl.classList.add('bought');
+        strikerEl.classList.remove('disabled');
+    } else {
+        strikerEl.classList.remove('bought');
+        strikerEl.classList.toggle('disabled', money < STRIKER_COST);
+    }
+    
+    // Manager
+    const managerEl = document.getElementById('manager');
+    document.getElementById('manager-status').textContent = hasManager ? 'Owned' : 'Not Owned';
+    if (hasManager) {
+        managerEl.classList.add('bought');
+        managerEl.classList.remove('disabled');
+    } else {
+        managerEl.classList.remove('bought');
+        managerEl.classList.toggle('disabled', money < MANAGER_COST);
+    }
+    
+    // Pitch
+    document.getElementById('pitch').classList.toggle('disabled', money < pitchCost);
+    
+    // Grandstand
+    const grandstandEl = document.getElementById('grandstand');
+    if (grandstandOwned >= 2) {
+        grandstandEl.classList.add('bought');
+        grandstandEl.classList.remove('disabled');
+    } else {
+        grandstandEl.classList.remove('bought');
+        grandstandEl.classList.toggle('disabled', money < grandstandCost);
+    }
+    if (grandstandOwned > 0) {
+        document.getElementById('grandstand-timer').textContent = `Next payout: ${formatTime(grandstandTimer)} x${grandstandOwned}`;
+    } else {
+        document.getElementById('grandstand-timer').textContent = '';
+    }
+    
+    // Goal End Stand
+    const goalEndEl = document.getElementById('goalend');
+    if (goalEndOwned >= 2) {
+        goalEndEl.classList.add('bought');
+        goalEndEl.classList.remove('disabled');
+    } else {
+        goalEndEl.classList.remove('bought');
+        goalEndEl.classList.toggle('disabled', money < goalEndCost);
+    }
+    if (goalEndOwned > 0) {
+        document.getElementById('goalend-timer').textContent = `Next payout: ${formatTime(goalEndTimer)} x${goalEndOwned}`;
+    } else {
+        document.getElementById('goalend-timer').textContent = '';
+    }
+    
+    updatePageNav();
+}
+
+// Game loop - runs every second
+setInterval(() => {
+    // Striker income
+    if (hasStriker) {
+        money += getPerSecond();
+    }
+    
+    // Grandstand payout
+    if (grandstandOwned > 0) {
+        grandstandTimer--;
+        if (grandstandTimer <= 0) {
+            let payout = GRANDSTAND_PAYOUT * grandstandOwned;
+            if (hasManager) payout = Math.floor(payout * MANAGER_MULTIPLIER);
+            money += payout;
+            grandstandTimer = GRANDSTAND_INTERVAL;
+            document.getElementById('save-status').textContent = `+£${payout.toLocaleString()} from Grandstands!`;
+            setTimeout(() => document.getElementById('save-status').textContent = 'Auto-saved', 2000);
+        }
+    }
+    
+    // Goal End payout
+    if (goalEndOwned > 0) {
+        goalEndTimer--;
+        if (goalEndTimer <= 0) {
+            let payout = GOALEND_PAYOUT * goalEndOwned;
+            if (hasManager) payout = Math.floor(payout * MANAGER_MULTIPLIER);
+            money += payout;
+            goalEndTimer = GOALEND_INTERVAL;
+            document.getElementById('save-status').textContent = `+£${payout.toLocaleString()} from Goal Ends!`;
+            setTimeout(() => document.getElementById('save-status').textContent = 'Auto-saved', 2000);
+        }
+    }
+    
+    updateDisplay();
+    saveGame();
+}, 1000);
+
+function saveGame() {
+    const save = { 
+        money, glovesOwned, gloveCost, hasBoots, hasStriker, hasManager,
+        pitchOwned, pitchCost, grandstandOwned, grandstandCost, grandstandTimer,
+        goalEndOwned, goalEndCost, goalEndTimer, currentPage 
+    };
+    localStorage.setItem('footballClicker', JSON.stringify(save));
+    if (document.getElementById('save-status').textContent === 'Auto-saved') {
+        document.getElementById('save-status').textContent = 'Saved ✓';
+        setTimeout(() => document.getElementById('save-status').textContent = 'Auto-saved', 1000);
+    }
+}
+
+function loadGame() {
+    const save = JSON.parse(localStorage.getItem('footballClicker'));
+    if (save) {
+        money = save.money || 0;
+        glovesOwned = save.glovesOwned || 0;
+        gloveCost = save.gloveCost || STARTING_GLOVE_COST;
+        hasBoots = save.hasBoots || false;
+        hasStriker = save.hasStriker || false;
+        hasManager = save.hasManager || false;
+        pitchOwned = save.pitchOwned || 0;
+        pitchCost = save.pitchCost || STARTING_PITCH_COST;
+        grandstandOwned = save.grandstandOwned || 0;
+        grandstandCost = save.grandstandCost || STARTING_GRANDSTAND_COST;
+        grandstandTimer = save.grandstandTimer || GRANDSTAND_INTERVAL;
+        goalEndOwned = save.goalEndOwned || 0;
+        goalEndCost = save.goalEndCost || STARTING_GOALEND_COST;
+        goalEndTimer = save.goalEndTimer || GOALEND_INTERVAL;
+        currentPage = save.currentPage || 1;
+        document.querySelectorAll('.shop-page').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.shop-page[data-page="${currentPage}"]`).classList.add('active');
+    }
+}
+
+loadGame();
+updateDisplay();
+</script>
+</body>
+</html>
